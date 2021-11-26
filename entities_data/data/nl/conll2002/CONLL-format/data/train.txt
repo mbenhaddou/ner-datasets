@@ -1,4 +1,5 @@
--DOCSTART- -DOCSTART- O
+-DOCSTART- -X- O
+
 De Art O
 tekst N O
 van Prep O

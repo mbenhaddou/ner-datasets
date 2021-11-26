@@ -8,7 +8,6 @@ import os
 import codecs
 from sklearn.model_selection import train_test_split
 
-from entities_data import utils
 
 
 def write_new_split(corpus_name, test_size, filedir, filename,
@@ -22,13 +21,6 @@ def write_new_split(corpus_name, test_size, filedir, filename,
 
     For now, this only supports stratified_split at the sentence level.
 
-    >>> TRAIN, TEST = write_new_split('CADEC', 1000, filedir, 'cadec', max_count = 2)
-    >>> TRAIN, TEST = write_new_split('re3d', 200, filedir, 're3d', max_count = 2)
-    >>> TRAIN, TEST = write_new_split('GUM', 1000, filedir, 'gum', max_count = 2)
-    >>> TRAIN, TEST = write_new_split('MUC6', 1000, filedir, 'muc6', max_count = 2)
-    >>> TRAIN, TEST = write_new_split('NIST_IEER99', 690, filedir, 'nist', max_count = 2)
-    >>> TRAIN, TEST = write_new_split('BBN', 10000, filedir, 'bbn', max_count = 2)
-    >>> TRAIN, TEST = write_new_split('GMB1', 1000, filedir, 'gmb1', max_count = 2)
 
     """
     r = utils.read_conll(corpus_name)

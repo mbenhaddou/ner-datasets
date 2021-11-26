@@ -14,7 +14,7 @@ try:
 except:
     import configparser as ConfigParser
 
-from entities_data import sentence_utils
+from entities_data import sentence
 
 
 def get_entities(corpus_name):
@@ -56,7 +56,7 @@ def get_entities(corpus_name):
     return entities
 
 
-def list_corpora(language=None):
+def list_datasets(language=None):
     """ List the available corpora names.
 
     These are read from file_locations.cfg. More corpus names can be added by
@@ -64,14 +64,14 @@ def list_corpora(language=None):
 
     """
     config = ConfigParser.RawConfigParser()
-    config.read('entities_data/file_locations.cfg')
+    config.read('entities_data/file_configs.cfg')
     if language is None:
         return config.sections()
     else:
-        return [s for s in config._sections if config._sections[s]["language"] == 'en']
+        return [s for s in config._sections if config._sections[s]["language"] == language]
 
 
-def get_corpus_location(corpus_name):
+def get_dataset_location(corpus_name):
     """ Given the corpus_name, this returns a tuple containing, in order:
 
     - file extension: only files with this file extension will be loaded
@@ -85,7 +85,7 @@ def get_corpus_location(corpus_name):
 
     """
     config = ConfigParser.RawConfigParser()
-    config.read('entities_data/file_locations.cfg')
+    config.read('entities_data/file_configs.cfg')
 
     data_dir = config.get(corpus_name, 'data_dir')
     docs_dir = config.get(corpus_name, 'docs_dir')
@@ -103,7 +103,7 @@ def get_file_settings(corpus_name):
     - The entity annotation scheme (IOB1, IOB2, etc.)
 
     """
-    data_dir, docs_dir = get_corpus_location(corpus_name)
+    data_dir, docs_dir = get_dataset_location(corpus_name)
     config_file = os.path.join(docs_dir, 'corpusconfig.cfg')
     config = ConfigParser.RawConfigParser()
     config.read(config_file)
@@ -125,7 +125,7 @@ def get_file_settings(corpus_name):
     if pos_pos == 'none' or pos_pos is None:
         pos_pos = word_pos
     pos_pos = int(pos_pos)
-    return word_pos, pos_pos, iob_pos, sep, IOB  # , domain
+    return {'word_position': word_pos, 'pos_position': pos_pos, 'iob_position': iob_pos, 'separator': sep, 'IOB': IOB}  # , domain
 
 
 def iob1_to_iob2(annotated_sentence):
@@ -207,8 +207,13 @@ def read_conll(corpus_name, split="all"):
     >>> data = list(utils.read_conll('Wikigold'))
 
     """
-    word_pos, pos_pos, iob_pos, sep, IOB = get_file_settings(corpus_name)
-    corpus_root = get_corpus_location(corpus_name)[0]
+    settings = get_file_settings(corpus_name)
+    word_pos=settings['word_position']
+    pos_pos=settings['pos_position']
+    iob_pos=settings['iob_position']
+    sep=settings['separator']
+    IOB=settings['IOB']
+    corpus_root = get_dataset_location(corpus_name)[0]
 
     if not os.path.exists(corpus_root):
         raise ValueError("The data directory specified in file_locations.cfg does not exist.")
@@ -226,7 +231,7 @@ def read_conll(corpus_name, split="all"):
                 annotated_sentences = file_content.split('\n\n')
 
                 for annotated_sentence in annotated_sentences:
-                    if annotated_sentence not in ['-DOCSTART- -X- O O', '-DOCSTART- -X- -X- O']:
+                    if annotated_sentence not in ['-DOCSTART- -X- O O', '-DOCSTART- -X- -X- O', '-DOCSTART- -X- O']:
                         # Split words:
                         annotated_tokens = [seq for seq in annotated_sentence.split('\n')]
                         standard_form_tokens = []
@@ -266,33 +271,10 @@ def read_conll(corpus_name, split="all"):
                             else:
                                 raise ValueError('Variable IOB has wrong value.')
 
-                        yield [((w, t), iob) for w, t, iob in conll_tokens]
+                        yield [(w, t, iob) for w, t, iob in conll_tokens]
 
 
-def attach_domain(corpus, domt):
-    """ Indicates whether the corpus is src (source) or tgt
-    (target) corpus when doing transfer learning.
-
-    This will return a list of lists of the form ((w,t,d),iob), where
-    d is the domain ('src' or 'tgt') given by domt.
-
-    Parameters
-    ----------
-
-    corpus : list
-        List of lists containing tuples of form ((w,t), iob)
-    domt : str
-        Either 'src' or 'tgt'.
-
-    """
-    if domt not in {'src', 'tgt'}:  # Domain type - source or target
-        raise ValueError("domt must be 'src' or 'tgt'.")
-
-    data_with_domain = [[((w, t, domt), iob) for ((w, t), iob) in d] for d in corpus]
-    return data_with_domain
-
-
-def get_NER_tagcounts(corpus_name):
+def get_tagcounts(corpus_name):
     """ Return count values for number of tokens for each entity type
     (including the 'O' type, i.e., not an entity).
 
@@ -303,8 +285,14 @@ def get_NER_tagcounts(corpus_name):
     convert to IOB2 format.
 
     """
-    word_pos, pos_pos, iob_pos, sep, IOB = get_file_settings(corpus_name)
-    corpus_root = get_corpus_location(corpus_name)[0]
+    settings= get_file_settings(corpus_name)
+    word_pos=settings['word_position']
+    pos_pos=settings['pos_position']
+    iob_pos=settings['iob_position']
+    sep=settings['separator']
+    IOB=settings['IOB']
+
+    corpus_root = get_dataset_location(corpus_name)[0]
 
     ner_tags = Counter()
 
